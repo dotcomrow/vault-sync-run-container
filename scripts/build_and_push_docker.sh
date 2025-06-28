@@ -24,7 +24,7 @@ eval "$(homebrew/bin/brew shellenv)"
 brew update --force --quiet
 chmod -R go-w "$(brew --prefix)/share/zsh"
 
-# export NONINTERACTIVE=1
+export NONINTERACTIVE=1
 
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # brew install glibc
@@ -35,8 +35,6 @@ chmod -R go-w "$(brew --prefix)/share/zsh"
 
 
 
-
-apt-get install -y uidmap
 export SKIP_IPTABLES=1
 curl -fsSL https://get.docker.com/rootless | sh
 
