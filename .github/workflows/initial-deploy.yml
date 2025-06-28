@@ -10,7 +10,6 @@ jobs:
     env:
       TF_CLOUD_ORGANIZATION: ${{ github.repository_owner }}
       TF_API_TOKEN: ${{ secrets.TFE_TOKEN }}
-      
     name: "Build and Deploy"
     runs-on: ubuntu-latest
 
@@ -18,30 +17,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create Release branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: release # The branch the action should deploy to.
-          folder: . # The folder the action should deploy.
-
-      - name: Checkout Release branch
-        uses: actions/checkout@v4
-        with:
-          ref: release
-          path: release
-
       - name: Get next version
         uses: reecetech/version-increment@2023.9.3
         id: version
         with:
           scheme: calver
           increment: patch
-
-      - name: Build
-        run: |
-          cd release
-          npm install
-          npm run build
 
       - name: Create workspace
         id: create_workspace_dev
@@ -58,7 +39,7 @@ jobs:
           }
           EOF
           curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+          --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
           --header "Content-Type: application/vnd.api+json" \
           --request POST \
           --data @payload.json \
@@ -69,25 +50,25 @@ jobs:
       - name: Create workspace
         id: create_workspace_prod
         run: |
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "attributes": {
-                "name": "${{ github.event.repository.name }}-prod",
-                "auto-apply": "true"
-              },
-              "type": "workspaces"
+            cat > payload.json <<EOF
+            {
+              "data": {
+                "attributes": {
+                  "name": "${{ github.event.repository.name }}-prod",
+                  "auto-apply": "true"
+                },
+                "type": "workspaces"
+              }
             }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          --output output.txt \
-          https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces
-          echo "workspace_id=$(cat output.txt | jq -r '.[].id')" >> $GITHUB_OUTPUT
+            EOF
+            curl \
+            --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data @payload.json \
+            --output output.txt \
+            https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces
+            echo "workspace_id=$(cat output.txt | jq -r '.[].id')" >> $GITHUB_OUTPUT 
 
       - name: Create workspace variables dev
         run: |
@@ -115,7 +96,7 @@ jobs:
           }
           EOF
           curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+          --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
           --header "Content-Type: application/vnd.api+json" \
           --request POST \
           --data @payload.json \
@@ -126,9 +107,9 @@ jobs:
             "data": {
               "type":"vars",
               "attributes": {
-                "key":"environment",
+                "key":"ENVIRONMENT",
                 "value":"dev",
-                "description":"organization name",
+                "description":"environment",
                 "category":"terraform",
                 "hcl":false,
                 "sensitive":false
@@ -145,133 +126,133 @@ jobs:
           }
           EOF
           curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+          --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
           --header "Content-Type: application/vnd.api+json" \
           --request POST \
           --data @payload.json \
           https://app.terraform.io/api/v2/vars
 
           cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"VERSION",
-                "value":"${{ steps.version.outputs.version }}",
-                "description":"code version",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.create_workspace_dev.outputs.workspace_id }}",
-                    "type":"workspaces"
+            {
+              "data": {
+                "type":"vars",
+                "attributes": {
+                  "key":"VERSION",
+                  "value":"${{ steps.version.outputs.version }}",
+                  "description":"code version",
+                  "category":"terraform",
+                  "hcl":false,
+                  "sensitive":false
+                },
+                "relationships": {
+                  "workspace": {
+                    "data": {
+                      "id":"${{ steps.create_workspace_dev.outputs.workspace_id }}",
+                      "type":"workspaces"
+                    }
                   }
                 }
               }
             }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
+            EOF
+            curl \
+            --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data @payload.json \
+            https://app.terraform.io/api/v2/vars
 
       - name: Create workspace variables prod
         run: |
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"project_name",
-                "value":"${{ github.event.repository.name }}",
-                "description":"project name",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.create_workspace_prod.outputs.workspace_id }}",
-                    "type":"workspaces"
+            cat > payload.json <<EOF
+            {
+              "data": {
+                "type":"vars",
+                "attributes": {
+                  "key":"project_name",
+                  "value":"${{ github.event.repository.name }}",
+                  "description":"project name",
+                  "category":"terraform",
+                  "hcl":false,
+                  "sensitive":false
+                },
+                "relationships": {
+                  "workspace": {
+                    "data": {
+                      "id":"${{ steps.create_workspace_prod.outputs.workspace_id }}",
+                      "type":"workspaces"
+                    }
                   }
                 }
               }
             }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
+            EOF
+            curl \
+            --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data @payload.json \
+            https://app.terraform.io/api/v2/vars
+  
+            cat > payload.json <<EOF
+            {
+              "data": {
+                "type":"vars",
+                "attributes": {
+                  "key":"ENVIRONMENT",
+                  "value":"prod",
+                  "description":"environment",
+                  "category":"terraform",
+                  "hcl":false,
+                  "sensitive":false
+                },
+                "relationships": {
+                  "workspace": {
+                    "data": {
+                      "id":"${{ steps.create_workspace_prod.outputs.workspace_id }}",
+                      "type":"workspaces"
+                    }
+                  }
+                }
+              }
+            }
+            EOF
+            curl \
+            --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data @payload.json \
+            https://app.terraform.io/api/v2/vars
 
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"environment",
-                "value":"prod",
-                "description":"organization name",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.create_workspace_prod.outputs.workspace_id }}",
-                    "type":"workspaces"
+            cat > payload.json <<EOF
+            {
+              "data": {
+                "type":"vars",
+                "attributes": {
+                  "key":"VERSION",
+                  "value":"${{ steps.version.outputs.version }}",
+                  "description":"code version",
+                  "category":"terraform",
+                  "hcl":false,
+                  "sensitive":false
+                },
+                "relationships": {
+                  "workspace": {
+                    "data": {
+                      "id":"${{ steps.create_workspace_prod.outputs.workspace_id }}",
+                      "type":"workspaces"
+                    }
                   }
                 }
               }
             }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
-
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"VERSION",
-                "value":"${{ steps.version.outputs.version }}",
-                "description":"code version",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.create_workspace_prod.outputs.workspace_id }}",
-                    "type":"workspaces"
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
+            EOF
+            curl \
+            --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data @payload.json \
+            https://app.terraform.io/api/v2/vars
 
       - name: Create release
         uses: "actions/github-script@v6"
@@ -289,7 +270,7 @@ jobs:
                 prerelease: false,
                 repo: context.repo.repo,
                 tag_name: process.env.VERSION + '-initial',
-                target_commitish: 'release'
+                target_commitish: 'prod'
               });
               core.exportVariable('RELEASE_ID', response.data.id);
               core.exportVariable('RELEASE_UPLOAD_URL', response.data.upload_url);
@@ -301,15 +282,15 @@ jobs:
         id: upload_dev
         with:
           workspace: ${{ github.event.repository.name }}-dev
-          directory: release
+          directory: .
 
       - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         id: upload_prod
         with:
-          workspace: ${{ github.event.repository.name }}-prod
-          directory: release
+            workspace: ${{ github.event.repository.name }}-prod
+            directory: .
 
-      - name: Create Apply Run dev
+      - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         id: apply-run-dev
         if: success() || failure()
@@ -318,14 +299,14 @@ jobs:
           configuration_version: ${{ steps.upload_dev.outputs.configuration_version_id }}
           plan_only: false
 
-      - name: Create Apply Run prod
+      - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         id: apply-run-prod
         if: success() || failure()
         with:
-          workspace: ${{ github.event.repository.name }}-prod
-          configuration_version: ${{ steps.upload_prod.outputs.configuration_version_id }}
-          plan_only: false
+            workspace: ${{ github.event.repository.name }}-prod
+            configuration_version: ${{ steps.upload_prod.outputs.configuration_version_id }}
+            plan_only: false
 
       - name: Disable initial workflow
         run: |
@@ -336,14 +317,3 @@ jobs:
               /repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/actions/workflows/initial-deploy.yml/disable
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Delete release branch
-        continue-on-error: true
-        run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git config pull.rebase true
-          resp=`git ls-remote --heads origin release | wc -m | sed 's/ //g'`
-          if [ $resp -gt 0 ]; then
-            git push origin --delete release
-          fi
