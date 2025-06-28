@@ -145,6 +145,31 @@ jobs:
           workspace: ${{ github.event.repository.name }}-${{ steps.setvars.outputs.environment }}
           directory: .
 
+      # ────────────────────────────────────────────────
+      # ⛓️ GHCR Build & Push Steps
+      # ────────────────────────────────────────────────
+
+      - name: Log in to GHCR
+        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} .
+
+      - name: Push Docker image to GHCR
+        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }}
+
+      - name: Tag and Push 'latest' Docker image
+        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
+        run: |
+          docker tag ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} \
+                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
+
       - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
