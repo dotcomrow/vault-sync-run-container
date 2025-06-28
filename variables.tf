@@ -10,12 +10,6 @@ variable "project_name" {
   nullable = false
 }
 
-variable "project_id" {
-  description = "The project id to create"
-  type        = string
-  nullable = false
-}
-
 variable "gcp_org_id" {
   description = "The organization id to create the project under"
   type        = string

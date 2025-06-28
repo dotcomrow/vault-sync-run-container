@@ -1,6 +1,11 @@
+# Create random suffix
+resource "random_id" "suffix_gcp" {
+  byte_length = 2
+}
+
 resource "google_project" "project" {
   name       = "${var.project_name}"
-  project_id = "${var.project_id}"
+  project_id = "${var.project_name}-${random_id.suffix_gcp.hex}"
   org_id     = "${var.gcp_org_id}"
   billing_account = "${var.billing_account}"
 }
@@ -14,7 +19,7 @@ resource "google_project_service" "project_service" {
 }
 
 data "google_compute_default_service_account" "default" {
-  project = var.project_id
+  project = google_project.project.project_id
 
   depends_on = [ google_project_service.project_service ]
 }

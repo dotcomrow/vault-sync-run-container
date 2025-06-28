@@ -1,3 +1,8 @@
+# Create random suffix
+resource "random_id" "suffix_gcp" {
+  byte_length = 2
+}
+
 data "external" "svc-image-sha" {
   program = ["${path.module}/scripts/get-image-sha.sh", "svc-${var.project_name}", "${var.common_project_id}"]
 }
@@ -25,7 +30,7 @@ resource "google_cloud_run_v2_service" "svc" {
   name     = "${var.project_name}"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
-  project  = var.project_id
+  project  = "${var.project_name}-${random_id.suffix_gcp.hex}"
 
   template {
     containers {
