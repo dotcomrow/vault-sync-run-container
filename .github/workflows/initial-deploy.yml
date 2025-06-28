@@ -2,6 +2,7 @@ name: Initial create workflow
 
 on:
   push:
+  workflow_dispatch:
 
 permissions: write-all
 
