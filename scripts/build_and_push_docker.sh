@@ -36,8 +36,8 @@ chmod -R go-w "$(brew --prefix)/share/zsh"
 
 
 
-# apt-get install -y uidmap
-# export SKIP_IPTABLES=1
+apt-get install -y uidmap
+export SKIP_IPTABLES=1
 curl -fsSL https://get.docker.com/rootless | sh
 
 ./google-cloud-sdk/bin/gcloud auth configure-docker
