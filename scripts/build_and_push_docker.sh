@@ -18,26 +18,22 @@ nvm install node
 
 npm install
 
-mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip-components 1 -C homebrew
-
-eval "$(homebrew/bin/brew shellenv)"
-brew update --force --quiet
-chmod -R go-w "$(brew --prefix)/share/zsh"
-
 export NONINTERACTIVE=1
 
-# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# brew install glibc
-# brew install gcc
-# brew install svn
-# brew install podman
-
-
-
-
+# Make sure DOCKER_VERSION is still set
 DOCKER_VERSION=24.0.6
+
+# Download Docker CLI
 curl -L https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz
 export PATH="$PWD/docker:$PATH"
+
+# 🛠️ Install buildx plugin manually
+mkdir -p ~/.docker/cli-plugins
+curl -SL "https://github.com/docker/buildx/releases/download/v0.14.1/buildx-v0.14.1.linux-amd64" -o ~/.docker/cli-plugins/docker-buildx
+chmod +x ~/.docker/cli-plugins/docker-buildx
+
+# Confirm it works
+docker buildx version
 
 ./google-cloud-sdk/bin/gcloud auth configure-docker
 
