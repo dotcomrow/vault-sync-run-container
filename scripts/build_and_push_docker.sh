@@ -27,8 +27,8 @@ chmod -R go-w "$(brew --prefix)/share/zsh"
 # export NONINTERACTIVE=1
 
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install glibc
-brew install gcc
+# brew install glibc
+# brew install gcc
 # brew install svn
 # brew install podman
 
