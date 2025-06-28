@@ -38,16 +38,16 @@ chmod -R go-w "$(brew --prefix)/share/zsh"
 
 # apt-get install -y uidmap
 # export SKIP_IPTABLES=1
-# curl -fsSL https://get.docker.com/rootless | sh
+curl -fsSL https://get.docker.com/rootless | sh
 
-# ./google-cloud-sdk/bin/gcloud auth configure-docker
+./google-cloud-sdk/bin/gcloud auth configure-docker
 
-# npm run build
+npm run build
 
-# docker build . -t $PROJECT_NAME:latest
+docker build . -t $PROJECT_NAME:latest
 
-# docker tag $PROJECT_NAME $REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest
+docker tag $PROJECT_NAME $REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest
 
-# docker push $REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest
+docker push $REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest
 
 
