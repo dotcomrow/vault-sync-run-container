@@ -43,10 +43,7 @@ export PATH="$PWD/docker:$PATH"
 
 npm run build
 
-docker build . -t $PROJECT_NAME:latest
-
-docker tag $PROJECT_NAME $REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest
-
-docker push $REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest
-
-
+docker buildx create --name mybuilder --use
+docker buildx build --platform linux/amd64 \
+  --tag "$REGION-docker.pkg.dev/$COMMON_PROJECT_ID/$REGISTRY_NAME/$PROJECT_NAME:latest" \
+  --push .
