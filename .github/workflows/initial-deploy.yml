@@ -24,6 +24,17 @@ jobs:
           scheme: calver
           increment: patch
 
+      - name: Lookup Project ID
+        id: lookup_project_id
+        run: |
+            curl \
+            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request GET \
+            --output project_output.txt \
+            https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/projects
+            echo "project_id=$(jq -r --arg name '${{ vars.TFE_PROJECT }}' '.data[] | select(.attributes.name | test($name; "i")) | .id' project_output.txt)" >> $GITHUB_OUTPUT
+
       - name: Create workspace
         id: create_workspace_dev
         run: |
@@ -34,7 +45,15 @@ jobs:
                 "name": "${{ github.event.repository.name }}-dev",
                 "auto-apply": "true"
               },
-              "type": "workspaces"
+              "type": "workspaces",
+              "relationships": {
+                "project": {
+                  "data": {
+                    "type": "projects",
+                    "id": "${{ steps.lookup_project_id.outputs.project_id }}"
+                  }
+                }
+              }
             }
           }
           EOF
@@ -57,7 +76,15 @@ jobs:
                   "name": "${{ github.event.repository.name }}-prod",
                   "auto-apply": "true"
                 },
-                "type": "workspaces"
+                "type": "workspaces",
+                "relationships": {
+                  "project": {
+                    "data": {
+                      "type": "projects",
+                      "id": "${{ steps.lookup_project_id.outputs.project_id }}"
+                    }
+                  }
+                }
               }
             }
             EOF

@@ -82,6 +82,17 @@ jobs:
           https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces/${{ github.event.repository.name }}-${{ steps.setvars.outputs.environment }} | jq -r '.data.id')
           echo "workspace_id=$workspace_id" >> $GITHUB_OUTPUT
 
+      - name: Lookup Project ID
+        id: lookup_project_id
+        run: |
+            curl \
+            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request GET \
+            --output project_output.txt \
+            https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/projects
+            echo "project_id=$(jq -r --arg name '${{ vars.TFE_PROJECT }}' '.data[] | select(.attributes.name | test($name; "i")) | .id' project_output.txt)" >> $GITHUB_OUTPUT
+
       - name: update version
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         run: |
