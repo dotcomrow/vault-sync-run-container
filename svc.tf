@@ -30,7 +30,7 @@ resource "google_cloud_run_v2_service" "svc" {
     }
   }
 
-  depends_on = [ google_project_iam_member.registry_permissions, google_project_iam_member.secret_manager_grant, resource.null_resource.build_and_push_image ]
+  depends_on = [ google_project_iam_member.registry_permissions, google_project_iam_member.secret_manager_grant ]
 }
 
 resource "google_cloud_run_service_iam_policy" "noauth-user-profile" {
