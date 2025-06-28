@@ -35,8 +35,9 @@ export NONINTERACTIVE=1
 
 
 
-export SKIP_IPTABLES=1
-curl -fsSL https://get.docker.com/rootless | sh
+DOCKER_VERSION=24.0.6
+curl -L https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz
+export PATH="$PWD/docker:$PATH"
 
 ./google-cloud-sdk/bin/gcloud auth configure-docker
 
