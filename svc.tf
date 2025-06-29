@@ -80,12 +80,13 @@ export PATH="$INSTALL_DIR/google-cloud-sdk/bin:$PATH"
 
 # Install gcloud beta CLI to access proxy repo features
 gcloud components install beta --quiet
+gcloud components install alpha --quiet
 
 # Activate service account
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
 
-gcloud artifacts repositories create ghcr-proxy \
+gcloud alpha artifacts repositories create ghcr-proxy \
   --repository-format=docker \
   --location=us-east1 \
   --project=vault-sync-run-container-9d59 \
