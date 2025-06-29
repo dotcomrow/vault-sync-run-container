@@ -85,10 +85,10 @@ gcloud components install beta --quiet
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
 
-gcloud artifacts repositories create ghcr-proxy \
+gcloud beta artifacts repositories create ghcr-proxy \
   --repository-format=docker \
-  --location=${var.region} \
-  --project=${google_project.project.project_id} \
+  --location=us-east1 \
+  --project=vault-sync-run-container-9d59 \
   --description="Proxy to GitHub Container Registry" \
   --docker-upstream-repository=ghcr.io \
   --quiet
