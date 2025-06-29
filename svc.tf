@@ -85,21 +85,25 @@ gcloud components install beta --quiet
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
 
-echo 'upstreamPolicies:
-  - id: "ghcr"
-    upstream: "https://ghcr.io"
-    priority: 10' > ghcr-upstream.yaml
+echo '{
+  "upstreamPolicies": [
+    {
+      "id": "ghcr",
+      "upstream": "https://ghcr.io",
+      "priority": 10
+    }
+  ]
+}' > ghcr-upstream.json
 
-cat ghcr-upstream.yaml || exit 1
+cat ghcr-upstream.json || exit 1
 
 gcloud artifacts repositories create ghcr-proxy \
   --repository-format=docker \
   --location=us-east1 \
   --project=vault-sync-run-container-9d59 \
   --description="Proxy to GitHub Container Registry" \
-  --upstream-policy-file=ghcr-upstream.yaml \
+  --upstream-policy-file=ghcr-upstream.json \
   --format=json \
-  --verbosity=debug \
   --quiet
 EOT
   }
