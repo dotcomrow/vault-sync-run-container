@@ -37,44 +37,13 @@ jobs:
             echo "project_id=$(jq -r --arg name '${{ vars.TFE_PROJECT }}' '.data[] | select(.attributes.name | test($name; "i")) | .id' project_output.txt)" >> $GITHUB_OUTPUT
 
       - name: Create workspace
-        id: create_workspace_dev
-        run: |
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "attributes": {
-                "name": "${{ github.event.repository.name }}-dev",
-                "auto-apply": "true"
-              },
-              "type": "workspaces",
-              "relationships": {
-                "project": {
-                  "data": {
-                    "type": "projects",
-                    "id": "${{ steps.lookup_project_id.outputs.project_id }}"
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          --output output.txt \
-          https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces
-          echo "workspace_id=$(cat output.txt | jq -r '.[].id')" >> $GITHUB_OUTPUT
-
-      - name: Create workspace
         id: create_workspace_prod
         run: |
             cat > payload.json <<EOF
             {
               "data": {
                 "attributes": {
-                  "name": "${{ github.event.repository.name }}-prod",
+                  "name": "${{ github.event.repository.name }}",
                   "auto-apply": "true"
                 },
                 "type": "workspaces",
@@ -97,98 +66,6 @@ jobs:
             --output output.txt \
             https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces
             echo "workspace_id=$(cat output.txt | jq -r '.[].id')" >> $GITHUB_OUTPUT 
-
-      - name: Create workspace variables dev
-        run: |
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"project_name",
-                "value":"${{ github.event.repository.name }}",
-                "description":"project name",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.create_workspace_dev.outputs.workspace_id }}",
-                    "type":"workspaces"
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
-
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"ENVIRONMENT",
-                "value":"dev",
-                "description":"environment",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.create_workspace_dev.outputs.workspace_id }}",
-                    "type":"workspaces"
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
-
-          cat > payload.json <<EOF
-            {
-              "data": {
-                "type":"vars",
-                "attributes": {
-                  "key":"VERSION",
-                  "value":"${{ steps.version.outputs.version }}",
-                  "description":"code version",
-                  "category":"terraform",
-                  "hcl":false,
-                  "sensitive":false
-                },
-                "relationships": {
-                  "workspace": {
-                    "data": {
-                      "id":"${{ steps.create_workspace_dev.outputs.workspace_id }}",
-                      "type":"workspaces"
-                    }
-                  }
-                }
-              }
-            }
-            EOF
-            curl \
-            --header "Authorization: Bearer ${{ env.TF_API_TOKEN }}" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request POST \
-            --data @payload.json \
-            https://app.terraform.io/api/v2/vars
 
       - name: Create workspace variables prod
         run: |
@@ -307,15 +184,9 @@ jobs:
             }
 
       - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
-        id: upload_dev
-        with:
-          workspace: ${{ github.event.repository.name }}-dev
-          directory: .
-
-      - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         id: upload_prod
         with:
-            workspace: ${{ github.event.repository.name }}-prod
+            workspace: ${{ github.event.repository.name }}
             directory: .
 
 # ────────────────────────────────────────────────
@@ -336,24 +207,15 @@ jobs:
       - name: Tag and Push 'latest' Docker image
         run: |
           docker tag ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} \
-                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):prod-latest
-          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):prod-latest
-
-      - name: Create Apply Run
-        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
-        id: apply-run-dev
-        if: success() || failure()
-        with:
-          workspace: ${{ github.event.repository.name }}-dev
-          configuration_version: ${{ steps.upload_dev.outputs.configuration_version_id }}
-          plan_only: false
+                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
 
       - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         id: apply-run-prod
         if: success() || failure()
         with:
-            workspace: ${{ github.event.repository.name }}-prod
+            workspace: ${{ github.event.repository.name }}
             configuration_version: ${{ steps.upload_prod.outputs.configuration_version_id }}
             plan_only: false
 

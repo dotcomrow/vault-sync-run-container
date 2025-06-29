@@ -34,18 +34,6 @@ jobs:
           scheme: calver
           increment: patch
 
-      - name: Set variables
-        id: setvars
-        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
-        run: |
-          if [[ "${{github.base_ref}}" == "dev" || "${{github.ref}}" == "refs/heads/dev" ]]; then
-            echo "environment=dev" >> $GITHUB_OUTPUT
-          fi
-
-          if [[ "${{github.base_ref}}" == "prod" || "${{github.ref}}" == "refs/heads/prod" ]]; then
-            echo "environment=prod" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create release
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         uses: "actions/github-script@v6"
@@ -63,7 +51,7 @@ jobs:
                 prerelease: false,
                 repo: context.repo.repo,
                 tag_name: process.env.VERSION,
-                target_commitish: '${{ steps.setvars.outputs.environment }}'
+                target_commitish: 'prod'
               });
               core.exportVariable('RELEASE_ID', response.data.id);
               core.exportVariable('RELEASE_UPLOAD_URL', response.data.upload_url);
@@ -79,7 +67,7 @@ jobs:
           --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
           --header "Content-Type: application/vnd.api+json" \
           --request GET \
-          https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces/${{ github.event.repository.name }}-${{ steps.setvars.outputs.environment }} | jq -r '.data.id')
+          https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces/${{ github.event.repository.name }} | jq -r '.data.id')
           echo "workspace_id=$workspace_id" >> $GITHUB_OUTPUT
 
       - name: Lookup Project ID
@@ -143,7 +131,7 @@ jobs:
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         id: upload
         with:
-          workspace: ${{ github.event.repository.name }}-${{ steps.setvars.outputs.environment }}
+          workspace: ${{ github.event.repository.name }}
           directory: .
 
       # ────────────────────────────────────────────────
@@ -168,14 +156,14 @@ jobs:
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         run: |
           docker tag ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} \
-                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.setvars.outputs.environment }}-latest
-          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.setvars.outputs.environment }}-latest
+                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
 
       - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         id: apply-run
         with:
-          workspace: ${{ github.event.repository.name }}-${{ steps.setvars.outputs.environment }}
+          workspace: ${{ github.event.repository.name }}
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
           plan_only: false
