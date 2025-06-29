@@ -97,8 +97,7 @@ echo '{
 
 cat ghcr-upstream.json || exit 1
 
-gcloud artifacts repositories create ghcr-proxy \
-  --repository-format=docker \
+gcloud beta artifacts docker repositories create ghcr-proxy \
   --location=us-east1 \
   --project=vault-sync-run-container-9d59 \
   --description="Proxy to GitHub Container Registry" \
