@@ -83,6 +83,7 @@ jobs:
           echo "workspace_id=$workspace_id" >> $GITHUB_OUTPUT
 
       - name: Lookup Project ID
+        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         id: lookup_project_id
         run: |
             curl \
