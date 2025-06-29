@@ -6,7 +6,7 @@ resource "google_cloud_run_v2_service" "svc" {
 
   template {
     containers {
-      image = "${var.registry_name}/dotcomrow/${var.project_name}:latest"
+      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/ghcr-proxy/dotcomrow/vault-sync-run-container:latest"
 
       env {
         name  = "GCP_BIGQUERY_PROJECT_ID"
@@ -39,4 +39,30 @@ resource "google_cloud_run_service_iam_policy" "noauth-user-profile" {
   service  = google_cloud_run_v2_service.svc.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+resource "null_resource" "ghcr_proxy_repo" {
+  provisioner "local-exec" {
+    command = <<EOT
+#!/bin/bash
+
+curl https://sdk.cloud.google.com > install.sh
+bash install.sh --disable-prompts --install-dir=./$dirstring >/dev/null 
+PATH=$PATH:./$dirstring/google-cloud-sdk/bin
+printf '%s' "$GOOGLE_CREDENTIALS" > key.json
+gcloud auth activate-service-account --key-file=key.json
+
+gcloud artifacts repositories create ghcr-proxy \
+  --repository-format=docker \
+  --location=${var.region} \
+  --project=${google_project.project.project_id} \
+  --description="Proxy to GitHub Container Registry" \
+  --docker-upstream-repository=ghcr.io \
+  --quiet
+EOT
+  }
+
+  triggers = {
+    repo = "${google_project.project.project_id}/ghcr-proxy"
+  }
 }
