@@ -85,12 +85,12 @@ gcloud components install beta --quiet
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
 
-cat <<EOF > ghcr-upstream.yaml
-upstreamPolicies:
+echo 'upstreamPolicies:
   - id: "ghcr"
     upstream: "https://ghcr.io"
-    priority: 10
-EOF
+    priority: 10' > ghcr-upstream.yaml
+
+cat ghcr-upstream.yaml || exit 1
 
 gcloud artifacts repositories create ghcr-proxy \
   --repository-format=docker \
