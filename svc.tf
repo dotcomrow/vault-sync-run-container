@@ -7,7 +7,7 @@ resource "google_cloud_run_v2_service" "svc" {
 
   template {
     containers {
-      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${google_project.project.project_id}/dotcomrow/vault-sync-run-container:latest"
+      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/vault-sync-run-container/dotcomrow/vault-sync-run-container:latest"
 
       env {
         name  = "GCP_BIGQUERY_PROJECT_ID"
