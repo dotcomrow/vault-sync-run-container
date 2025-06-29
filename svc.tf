@@ -46,9 +46,38 @@ resource "null_resource" "ghcr_proxy_repo" {
     command = <<EOT
 #!/bin/bash
 
-curl https://sdk.cloud.google.com > install.sh
-bash install.sh --disable-prompts --install-dir=./$dirstring >/dev/null 
-PATH=$PATH:./$dirstring/google-cloud-sdk/bin
+datenum=$(expr $(date +%s) + 0)
+dirstring="$((datenum % 10000))dir"
+retries=5
+while true; do
+  res=$(mkdir $dirstring 2>&1)
+  if echo "$res" | grep -Eq '^.{0}$'; then
+    break
+  fi
+  sleep 5
+  datenum=$(expr $(date +%s) + 0)
+  dirstring="$((datenum % 10000))dir"
+  retries=$((retries - 1))
+  if [ $retries -eq 0 ]; then
+    echo "Failed to create directory"
+    exit 1
+  fi
+done
+
+# Define desired version (472.0.0 or later)
+GCLOUD_VERSION=472.0.0
+INSTALL_DIR="./$dirstring"
+
+# Download and extract specific SDK version
+curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-$GCLOUD_VERSION-linux-x86_64.tar.gz" | tar -xz -C "$INSTALL_DIR"
+
+# Update PATH to include gcloud CLI
+export PATH="$INSTALL_DIR/google-cloud-sdk/bin:$PATH"
+
+# Disable gcloud prompts and install core components
+"$INSTALL_DIR/google-cloud-sdk/install.sh" --quiet
+
+# Activate service account
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
 
