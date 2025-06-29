@@ -98,6 +98,8 @@ gcloud artifacts repositories create ghcr-proxy \
   --project=vault-sync-run-container-9d59 \
   --description="Proxy to GitHub Container Registry" \
   --upstream-policy-file=ghcr-upstream.yaml \
+  --format=json \
+  --verbosity=debug \
   --quiet
 EOT
   }
