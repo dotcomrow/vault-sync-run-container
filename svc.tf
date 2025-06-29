@@ -95,7 +95,7 @@ curl -sS -X POST \
       }
     }
   }" \
-  "https://artifactregistry.googleapis.com/v1/projects/$PROJECT_ID/locations/$REGION/repositories?repositoryId=$PROJECT_NAME" \
+  "https://artifactregistry.googleapis.com/v1/projects/$PROJECT_ID/locations/$region/repositories?repositoryId=${google_project.project.project_id}" \
   || echo "⚠️ GHCR proxy repo may already exist or failed to create."
 
 echo "✅ GHCR proxy repository setup complete."
