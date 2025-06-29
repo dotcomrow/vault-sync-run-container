@@ -92,7 +92,7 @@ upstreamPolicies:
     priority: 10
 EOF
 
-gcloud beta artifacts repositories create ghcr-proxy \
+gcloud artifacts repositories create ghcr-proxy \
   --repository-format=docker \
   --location=us-east1 \
   --project=vault-sync-run-container-9d59 \
