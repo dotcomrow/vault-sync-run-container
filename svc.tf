@@ -51,7 +51,6 @@ resource "null_resource" "ghcr_proxy_repo" {
 
     command = <<EOT
 #!/bin/bash
-set -euo pipefail
 
 datenum=$(date +%s)
 dirstring="$((datenum % 10000))dir"
