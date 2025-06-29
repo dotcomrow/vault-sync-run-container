@@ -66,7 +66,7 @@ while true; do
 done
 
 # Define desired version (472.0.0 or later)
-GCLOUD_VERSION=472.0.0
+GCLOUD_VERSION=528.0.0
 INSTALL_DIR="./$dirstring"
 
 # Download and extract specific SDK version
