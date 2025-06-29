@@ -44,19 +44,21 @@ resource "google_cloud_run_service_iam_policy" "noauth-user-profile" {
 
 resource "null_resource" "ghcr_proxy_repo" {
   provisioner "local-exec" {
+    environment = {
+      PROJECT_ID = google_project.project.project_id
+      REGION     = var.region
+    }
+
     command = <<EOT
 #!/bin/bash
+set -euo pipefail
 
-datenum=$(expr $(date +%s) + 0)
+datenum=$(date +%s)
 dirstring="$((datenum % 10000))dir"
 retries=5
-while true; do
-  res=$(mkdir $dirstring 2>&1)
-  if echo "$res" | grep -Eq '^.{0}$'; then
-    break
-  fi
+while ! mkdir "$dirstring" 2>/dev/null; do
   sleep 5
-  datenum=$(expr $(date +%s) + 0)
+  datenum=$(date +%s)
   dirstring="$((datenum % 10000))dir"
   retries=$((retries - 1))
   if [ $retries -eq 0 ]; then
@@ -65,23 +67,20 @@ while true; do
   fi
 done
 
-# Define desired version (472.0.0 or later)
 GCLOUD_VERSION=528.0.0
 INSTALL_DIR="./$dirstring"
 
-# Download and extract specific SDK version
 curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-$GCLOUD_VERSION-linux-x86_64.tar.gz" | tar -xz -C "$INSTALL_DIR"
-
-# Update PATH to include gcloud CLI
 export PATH="$INSTALL_DIR/google-cloud-sdk/bin:$PATH"
-
-# Disable gcloud prompts and install core components
 "$INSTALL_DIR/google-cloud-sdk/install.sh" --quiet
 
-# Get access token for API call
+printf '%s' "$GOOGLE_CREDENTIALS" > key.json
+gcloud auth activate-service-account --key-file=key.json
+gcloud config set project "$PROJECT_ID"
+
 ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-# Create GHCR proxy repository using Artifact Registry REST API
+# Create GHCR proxy repository
 curl -sS -X POST \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
@@ -95,7 +94,7 @@ curl -sS -X POST \
       }
     }
   }" \
-  "https://artifactregistry.googleapis.com/v1/projects/$PROJECT_ID/locations/$region/repositories?repositoryId=${google_project.project.project_id}" \
+  "https://artifactregistry.googleapis.com/v1/projects/$PROJECT_ID/locations/$REGION/repositories?repositoryId=vault-sync-run-container" \
   || echo "⚠️ GHCR proxy repo may already exist or failed to create."
 
 echo "✅ GHCR proxy repository setup complete."
@@ -103,6 +102,6 @@ EOT
   }
 
   triggers = {
-    repo = "${google_project.project.project_id}/ghcr-proxy"
+    repo = "${google_project.project.project_id}/vault-sync-run-container"
   }
 }
