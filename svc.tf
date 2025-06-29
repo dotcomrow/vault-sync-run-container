@@ -89,7 +89,7 @@ echo '{
   "upstreamPolicies": [
     {
       "id": "ghcr",
-      "upstream": "https://ghcr.io",
+      "repository": "https://ghcr.io",
       "priority": 10
     }
   ]
