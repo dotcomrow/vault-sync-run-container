@@ -1,26 +1,3 @@
-data "external" "svc-image-sha" {
-  program = ["${path.module}/scripts/get-image-sha.sh", "svc-${var.project_name}", "${var.common_project_id}"]
-}
-
-resource "null_resource" "build_and_push_image" {
-
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-
-  provisioner "local-exec" {
-    command = "${path.module}/scripts/build_and_push_docker.sh"
-    environment = {
-      PROJECT_NAME = var.project_name
-      REGION = var.region
-      COMMON_PROJECT_ID = var.common_project_id
-      REGISTRY_NAME = var.registry_name
-    }
-  }
-
-  depends_on = [data.external.svc-image-sha]
-}
-
 resource "google_cloud_run_v2_service" "svc" {
   name     = "${var.project_name}"
   location = var.region
@@ -29,7 +6,7 @@ resource "google_cloud_run_v2_service" "svc" {
 
   template {
     containers {
-      image = "${var.registry_name}/${var.common_project_id}/svc-${var.project_name}@${data.external.svc-image-sha.result["sha"]}"
+      image = "${var.registry_name}/${var.common_project_id}/svc-${var.project_name}@latest"
 
       env {
         name  = "GCP_BIGQUERY_PROJECT_ID"
@@ -53,7 +30,7 @@ resource "google_cloud_run_v2_service" "svc" {
     }
   }
 
-  depends_on = [ google_project_iam_member.registry_permissions, google_project_iam_member.secret_manager_grant, resource.null_resource.build_and_push_image ]
+  depends_on = [ google_project_iam_member.registry_permissions, google_project_iam_member.secret_manager_grant ]
 }
 
 resource "google_cloud_run_service_iam_policy" "noauth-user-profile" {
