@@ -78,6 +78,9 @@ export PATH="$INSTALL_DIR/google-cloud-sdk/bin:$PATH"
 # Disable gcloud prompts and install core components
 "$INSTALL_DIR/google-cloud-sdk/install.sh" --quiet
 
+# Install gcloud beta CLI to access proxy repo features
+gcloud components install beta --quiet
+
 # Activate service account
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
