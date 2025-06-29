@@ -6,7 +6,7 @@ resource "google_cloud_run_v2_service" "svc" {
 
   template {
     containers {
-      image = "${var.registry_name}/${var.common_project_id}/svc-${var.project_name}@latest"
+      image = "${var.registry_name}/dotcomrow/${var.project_name}@prod-latest"
 
       env {
         name  = "GCP_BIGQUERY_PROJECT_ID"
