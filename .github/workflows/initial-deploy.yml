@@ -318,6 +318,27 @@ jobs:
             workspace: ${{ github.event.repository.name }}-prod
             directory: .
 
+# ────────────────────────────────────────────────
+      # ⛓️ GHCR Build & Push Steps
+      # ────────────────────────────────────────────────
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} .
+
+      - name: Push Docker image to GHCR
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }}
+
+      - name: Tag and Push 'latest' Docker image
+        run: |
+          docker tag ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} \
+                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):prod-latest
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):prod-latest
+
       - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         id: apply-run-dev

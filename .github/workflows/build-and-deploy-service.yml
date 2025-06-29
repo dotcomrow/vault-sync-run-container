@@ -83,6 +83,7 @@ jobs:
           echo "workspace_id=$workspace_id" >> $GITHUB_OUTPUT
 
       - name: Lookup Project ID
+        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         id: lookup_project_id
         run: |
             curl \
@@ -167,8 +168,8 @@ jobs:
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
         run: |
           docker tag ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.version.outputs.version }} \
-                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
-          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):latest
+                     ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.setvars.outputs.environment }}-latest
+          docker push ghcr.io/${{ github.repository_owner }}/$(basename ${{ github.repository }}):${{ steps.setvars.outputs.environment }}-latest
 
       - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
