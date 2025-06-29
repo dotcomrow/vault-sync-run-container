@@ -3,6 +3,7 @@ resource "google_cloud_run_v2_service" "svc" {
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
   project  = "${var.project_name}-${random_id.suffix_gcp.hex}"
+  deletion_protection = false
 
   template {
     containers {
