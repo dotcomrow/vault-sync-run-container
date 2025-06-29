@@ -6,7 +6,7 @@ resource "google_cloud_run_v2_service" "svc" {
 
   template {
     containers {
-      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/ghcr-proxy/dotcomrow/vault-sync-run-container:latest"
+      image = "${var.registry_name}/dotcomrow/${var.project_name}:latest"
 
       env {
         name  = "GCP_BIGQUERY_PROJECT_ID"
@@ -39,17 +39,4 @@ resource "google_cloud_run_service_iam_policy" "noauth-user-profile" {
   service  = google_cloud_run_v2_service.svc.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
-}
-
-resource "google_artifact_registry_repository" "ghcr_proxy" {
-  provider           = google
-  location           = var.region
-  repository_id      = "ghcr-proxy"
-  format             = "DOCKER"
-  description        = "Proxies images from GitHub Container Registry"
-  docker_config {
-    upstream_registry {
-      hostname = "ghcr.io"
-    }
-  }
 }
