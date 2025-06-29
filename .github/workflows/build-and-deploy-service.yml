@@ -2,7 +2,7 @@ name: Build and Deploy Services
 
 on:
   push:
-    branches: ["prod", "dev"]
+    branches: ["prod"]
 
 permissions: write-all
 
@@ -33,99 +33,6 @@ jobs:
         with:
           scheme: calver
           increment: patch
-
-      - name: Create release
-        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
-        uses: "actions/github-script@v6"
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        with:
-          github-token: "${{ github.token }}"
-          script: |
-            try {
-              const response = await github.rest.repos.createRelease({
-                draft: false,
-                generate_release_notes: true,
-                name: process.env.VERSION,
-                owner: context.repo.owner,
-                prerelease: false,
-                repo: context.repo.repo,
-                tag_name: process.env.VERSION,
-                target_commitish: 'prod'
-              });
-              core.exportVariable('RELEASE_ID', response.data.id);
-              core.exportVariable('RELEASE_UPLOAD_URL', response.data.upload_url);
-            } catch (error) {
-              core.setFailed(error.message);
-            }
-
-      - name: Fetch workspace id
-        id: fetch_workspace_id
-        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
-        run: |
-          workspace_id=$(curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request GET \
-          https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/workspaces/${{ github.event.repository.name }} | jq -r '.data.id')
-          echo "workspace_id=$workspace_id" >> $GITHUB_OUTPUT
-
-      - name: Lookup Project ID
-        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
-        id: lookup_project_id
-        run: |
-            curl \
-            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request GET \
-            --output project_output.txt \
-            https://app.terraform.io/api/v2/organizations/${{ github.repository_owner }}/projects
-            echo "project_id=$(jq -r --arg name '${{ vars.TFE_PROJECT }}' '.data[] | select(.attributes.name | test($name; "i")) | .id' project_output.txt)" >> $GITHUB_OUTPUT
-
-      - name: update version
-        if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
-        run: |
-          curl \
-            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-            --header "Content-Type: application/vnd.api+json" \
-            "https://app.terraform.io/api/v2/workspaces/${{ steps.fetch_workspace_id.outputs.workspace_id }}/vars" | jq -r '.data[] | select(.attributes.key == "VERSION") | .id' > var_id
-
-          VAR_ID=$(cat var_id)
-          curl \
-            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request DELETE \
-            https://app.terraform.io/api/v2/workspaces/${{ steps.fetch_workspace_id.outputs.workspace_id }}/vars/$VAR_ID
-
-          cat > payload.json <<EOF
-          {
-            "data": {
-              "type":"vars",
-              "attributes": {
-                "key":"VERSION",
-                "value":"${{ steps.version.outputs.version }}",
-                "description":"code version",
-                "category":"terraform",
-                "hcl":false,
-                "sensitive":false
-              },
-              "relationships": {
-                "workspace": {
-                  "data": {
-                    "id":"${{ steps.fetch_workspace_id.outputs.workspace_id }}",
-                    "type":"workspaces"
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          curl \
-          --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
-          --header "Content-Type: application/vnd.api+json" \
-          --request POST \
-          --data @payload.json \
-          https://app.terraform.io/api/v2/vars
 
       - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         if: ${{ steps.check_state.outputs.initial_deploy_state == 'disabled_manually' }}
