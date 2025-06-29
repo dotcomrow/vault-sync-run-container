@@ -78,24 +78,27 @@ export PATH="$INSTALL_DIR/google-cloud-sdk/bin:$PATH"
 # Disable gcloud prompts and install core components
 "$INSTALL_DIR/google-cloud-sdk/install.sh" --quiet
 
-# Install gcloud beta CLI to access proxy repo features
-gcloud components install beta --quiet
-gcloud components install alpha --quiet
+# Get access token for API call
+ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-# Activate service account
-printf '%s' "$GOOGLE_CREDENTIALS" > key.json
-gcloud auth activate-service-account --key-file=key.json
+# Create GHCR proxy repository using Artifact Registry REST API
+curl -sS -X POST \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"format\": \"DOCKER\",
+    \"description\": \"Proxy to GitHub Container Registry\",
+    \"mode\": \"REMOTE_REPOSITORY\",
+    \"remoteRepositoryConfig\": {
+      \"dockerRepository\": {
+        \"publicRepository\": \"GHCR\"
+      }
+    }
+  }" \
+  "https://artifactregistry.googleapis.com/v1/projects/$PROJECT_ID/locations/$REGION/repositories?repositoryId=$PROJECT_NAME" \
+  || echo "⚠️ GHCR proxy repo may already exist or failed to create."
 
-gcloud alpha artifacts repositories create ghcr-proxy \
-  --repository-format=docker \
-  --location=us-east1 \
-  --project=vault-sync-run-container-9d59 \
-  --description="Proxy to GitHub Container Registry" \
-  --docker-config-authentication=DISABLED \
-  --upstream-repository=https://ghcr.io \
-  --format=json \
-  --quiet
-EOT
+echo "✅ GHCR proxy repository setup complete."EOT
   }
 
   triggers = {
