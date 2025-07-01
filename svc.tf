@@ -81,6 +81,9 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
       echo "$GOOGLE_CREDENTIALS" > key.json
       gcloud auth activate-service-account --key-file=key.json
       gcloud config set project "$PROJECT_ID"
+
+      # ✅ Login to Artifact Registry directly
+      echo "$(gcloud auth print-access-token)" | docker login -u oauth2accesstoken --password-stdin https://$REGION-docker.pkg.dev
       gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
       # Delete all images in Artifact Registry repo (digests + tags)
