@@ -68,55 +68,47 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
     command = <<EOT
 #!/bin/bash
 
-# Setup
-echo "🔧 Installing gcloud CLI..."
+# Download and extract gcloud
 curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-linux-x86_64.tar.gz
-./google-cloud-sdk/install.sh --quiet
+export PATH="$(pwd)/google-cloud-sdk/bin:$PATH"
 
-# Auth to GCP
-echo "🔐 Authenticating to GCP..."
-printf '%s' "$GOOGLE_CREDENTIALS" > key.json
-export CLOUDSDK_CONFIG="$(pwd)/.gcloud"  # Isolate config path for tf-agent sandbox
-mkdir -p "$CLOUDSDK_CONFIG"
-
-./google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=key.json
-./google-cloud-sdk/bin/gcloud config set project "${google_project.project.project_id}"
-./google-cloud-sdk/bin/gcloud auth configure-docker "${var.region}-docker.pkg.dev" --quiet
-
-# Point Docker to this config so the credential helper is respected
+# Isolate gcloud + docker config
+export CLOUDSDK_CONFIG="$(pwd)/.gcloud"
 export DOCKER_CONFIG="$(pwd)/.docker"
-mkdir -p "$DOCKER_CONFIG"
+mkdir -p "$CLOUDSDK_CONFIG" "$DOCKER_CONFIG"
+
+# Authenticate with GCP
+echo "${GOOGLE_CREDENTIALS}" > key.json
+gcloud auth activate-service-account --key-file=key.json
+gcloud config set project "$PROJECT_ID"
+gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+
+# Write Docker config.json with gcloud helper
 cat > "$DOCKER_CONFIG/config.json" <<EOF
 {
   "credHelpers": {
-    "${var.region}-docker.pkg.dev": "gcloud"
+    "$REGION-docker.pkg.dev": "gcloud"
   }
 }
 EOF
 
-
-# Clean up Artifact Registry (optional)
-echo "🧹 Deleting previous images in Artifact Registry..."
-REPO_PATH="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE"
-EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list "$REPO_PATH" --format="get(version)" || true)
-for digest in $EXISTING_IMAGES; do
-  ./google-cloud-sdk/bin/gcloud artifacts docker images delete "$REPO_PATH@$digest" --quiet --delete-tags || true
+# Delete all existing images in the Artifact Registry repo
+EXISTING_IMAGES=$(gcloud artifacts docker images list "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME" --format="get(version)" || true)
+for image in $EXISTING_IMAGES; do
+  gcloud artifacts docker images delete "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME@$image" --quiet --delete-tags || true
 done
 
-# Pull from GHCR
-echo "📥 Pulling from GHCR..."
-docker pull "ghcr.io/$GHCR_USER/$IMAGE:latest"
+# Pull from GHCR (no auth needed for public image)
+docker pull "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest"
 
-# Tag for GCP
-echo "🏷️ Tagging image for Artifact Registry..."
-docker tag "ghcr.io/$GHCR_USER/$IMAGE:latest" "$REPO_PATH:latest"
+# Tag and push to GCP Artifact Registry
+docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
+  "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
 
-# Push to GCP
-echo "📤 Pushing to GCP Artifact Registry..."
-docker push "$REPO_PATH:latest"
+docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
 
-echo "✅ GHCR image synced to Artifact Registry."
+echo "✅ GHCR image successfully synced to GCP Artifact Registry."
 EOT
   }
 
