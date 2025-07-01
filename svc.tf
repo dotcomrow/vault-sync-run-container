@@ -68,42 +68,40 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
     command = <<EOT
 #!/bin/bash
 
-echo "🔧 Installing gcloud..."
+# Setup
+echo "🔧 Installing gcloud CLI..."
 curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-linux-x86_64.tar.gz
 ./google-cloud-sdk/install.sh --quiet
 
+# Auth to GCP
 echo "🔐 Authenticating to GCP..."
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 ./google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=key.json
 ./google-cloud-sdk/bin/gcloud config set project "$PROJECT_ID"
 ./google-cloud-sdk/bin/gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
-echo "🧹 Deleting old images..."
-EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list \
-  "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE" --format="get(version)" || true)
+# Clean up Artifact Registry (optional)
+echo "🧹 Deleting previous images in Artifact Registry..."
+REPO_PATH="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE"
+EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list "$REPO_PATH" --format="get(version)" || true)
+for digest in $EXISTING_IMAGES; do
+  ./google-cloud-sdk/bin/gcloud artifacts docker images delete "$REPO_PATH@$digest" --quiet --delete-tags || true
+done
 
-if [ -n "$EXISTING_IMAGES" ]; then
-  for image in $EXISTING_IMAGES; do
-    ./google-cloud-sdk/bin/gcloud artifacts docker images delete \
-      "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE@$image" \
-      --quiet --delete-tags || true
-  done
-else
-  echo "🗑️ No existing images to delete."
-fi
-
-echo "🐳 Pulling image from GHCR..."
+# Pull from GHCR
+echo "📥 Pulling from GHCR..."
 docker pull "ghcr.io/$GHCR_USER/$IMAGE:latest"
 
-echo "🏷️ Tagging for GCP Artifact Registry..."
-docker tag "ghcr.io/$GHCR_USER/$IMAGE:latest" \
-  "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:latest"
+# Tag for GCP
+echo "🏷️ Tagging image for Artifact Registry..."
+docker tag "ghcr.io/$GHCR_USER/$IMAGE:latest" "$REPO_PATH:latest"
 
-echo "📤 Pushing to Artifact Registry..."
-docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:latest"
+# Push to GCP
+echo "📤 Pushing to GCP Artifact Registry..."
+docker push "$REPO_PATH:latest"
 
-echo "✅ GHCR image synced to GCP Artifact Registry."
+echo "✅ GHCR image synced to Artifact Registry."
 EOT
   }
 
