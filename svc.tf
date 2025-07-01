@@ -57,55 +57,64 @@ resource "google_artifact_registry_repository" "vault_sync_repo" {
 
 resource "null_resource" "ghcr_to_gcp_image_sync" {
   provisioner "local-exec" {
+    environment = {
+      GOOGLE_CREDENTIALS = var.GOOGLE_CREDENTIALS
+      PROJECT_ID         = google_project.project.project_id
+      REGION             = var.region
+      REPO               = var.project_name
+      IMAGE              = var.project_name
+      GHCR_USER          = "dotcomrow"
+    }
+
     command = <<EOT
 #!/bin/bash
 
-PROJECT_ID="${google_project.project.project_id}"
-
-# Download and install Google Cloud SDK
-curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+echo "🔧 Installing gcloud..."
+curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
 tar -xf google-cloud-cli-linux-x86_64.tar.gz
-./google-cloud-sdk/install.sh
+./google-cloud-sdk/install.sh --quiet
 
-# Authenticate to GCP
+echo "🔐 Authenticating to GCP..."
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 ./google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=key.json
 ./google-cloud-sdk/bin/gcloud config set project "$PROJECT_ID"
-./google-cloud-sdk/bin/gcloud auth configure-docker "${var.region}-docker.pkg.dev" --quiet
+./google-cloud-sdk/bin/gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
-# Debug auth
-echo "🔐 Docker config:"
-cat ~/.docker/config.json || echo "⚠️ Docker config not found"
-
-# Delete existing images in Artifact Registry
+echo "🧹 Deleting old images..."
 EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list \
-  "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}" --format="get(version)")
+  "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE" --format="get(version)" || true)
 
 if [ -n "$EXISTING_IMAGES" ]; then
   for image in $EXISTING_IMAGES; do
     ./google-cloud-sdk/bin/gcloud artifacts docker images delete \
-      "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}@$image" \
+      "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE@$image" \
       --quiet --delete-tags || true
   done
 else
-  echo "🗑️ No images to delete."
+  echo "🗑️ No existing images to delete."
 fi
 
-# Pull from GHCR
-docker pull "ghcr.io/dotcomrow/${var.project_name}:latest"
+echo "🐳 Pulling image from GHCR..."
+docker pull "ghcr.io/$GHCR_USER/$IMAGE:latest"
 
-# Tag for GCP
-docker tag "ghcr.io/dotcomrow/${var.project_name}:latest" \
-  "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}:latest"
+echo "🏷️ Tagging for GCP Artifact Registry..."
+docker tag "ghcr.io/$GHCR_USER/$IMAGE:latest" \
+  "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:latest"
 
-# Push to GCP Artifact Registry
-docker push "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}:latest"
+echo "📤 Pushing to Artifact Registry..."
+docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:latest"
 
-echo "✅ GHCR image synced to Artifact Registry."
+echo "✅ GHCR image synced to GCP Artifact Registry."
 EOT
   }
 
+  depends_on = [
+    google_artifact_registry_repository.vault_sync_repo
+  ]
+
   triggers = {
-    force_run = timestamp()
+    project     = var.project_name
+    image       = var.project_name
+    timestamp   = timestamp()
   }
 }

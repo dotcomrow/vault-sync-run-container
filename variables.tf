@@ -79,3 +79,9 @@ variable GCP_LOGGING_CREDENTIALS {
   type        = string
   nullable = false
 }
+
+variable "GOOGLE_CREDENTIALS" {
+  description = "GCP credentials in JSON format"
+  type        = string
+  nullable = false
+}
