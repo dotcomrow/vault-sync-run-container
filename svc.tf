@@ -7,7 +7,7 @@ resource "google_cloud_run_v2_service" "svc" {
 
   template {
     containers {
-      image = "ghcr.io/dotcomrow/${var.project_name}:latest"
+      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest"
 
       env {
         name  = "GCP_BIGQUERY_PROJECT_ID"
@@ -62,6 +62,7 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
       REGION             = var.region
       REPO               = var.project_name
       IMAGE              = var.project_name
+      IMAGE_NAME         = var.project_name
       GHCR_USER          = "dotcomrow"
     }
 
