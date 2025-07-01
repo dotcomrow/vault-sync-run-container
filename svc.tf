@@ -66,7 +66,6 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
 
     command = <<-EOT
       #!/bin/bash
-      set -euo pipefail
 
       # Download and extract gcloud
       curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
