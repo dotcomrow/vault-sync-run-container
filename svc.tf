@@ -83,15 +83,6 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
       gcloud config set project "$PROJECT_ID"
       gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
-      # Write Docker config.json with gcloud helper
-      cat > "$DOCKER_CONFIG/config.json" <<EOF
-{
-  "credHelpers": {
-    "$REGION-docker.pkg.dev": "gcloud"
-  }
-}
-EOF
-
       # Delete all images in Artifact Registry repo (digests + tags)
       REPO_PATH="$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME"
       EXISTING_IMAGES=$(gcloud artifacts docker images list "$REPO_PATH" --format="get(version)" || true)
