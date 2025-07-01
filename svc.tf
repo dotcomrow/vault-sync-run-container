@@ -100,7 +100,5 @@ echo "✅ GHCR proxy repository setup complete."
 EOT
   }
 
-  triggers = {
-    repo = "${google_project.project.project_id}/vault-sync-run-container"
-  }
+  depends_on = [ google_project.project ]
 }
