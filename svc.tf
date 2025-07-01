@@ -58,7 +58,6 @@ resource "google_artifact_registry_repository" "vault_sync_repo" {
 resource "null_resource" "ghcr_to_gcp_image_sync" {
   provisioner "local-exec" {
     environment = {
-      GOOGLE_CREDENTIALS = var.GOOGLE_CREDENTIALS
       PROJECT_ID         = google_project.project.project_id
       REGION             = var.region
       REPO               = var.project_name
