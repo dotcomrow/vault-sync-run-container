@@ -77,9 +77,24 @@ tar -xf google-cloud-cli-linux-x86_64.tar.gz
 # Auth to GCP
 echo "🔐 Authenticating to GCP..."
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
+export CLOUDSDK_CONFIG="$(pwd)/.gcloud"  # Isolate config path for tf-agent sandbox
+mkdir -p "$CLOUDSDK_CONFIG"
+
 ./google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=key.json
-./google-cloud-sdk/bin/gcloud config set project "$PROJECT_ID"
-./google-cloud-sdk/bin/gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+./google-cloud-sdk/bin/gcloud config set project "${google_project.project.project_id}"
+./google-cloud-sdk/bin/gcloud auth configure-docker "${var.region}-docker.pkg.dev" --quiet
+
+# Point Docker to this config so the credential helper is respected
+export DOCKER_CONFIG="$(pwd)/.docker"
+mkdir -p "$DOCKER_CONFIG"
+cat > "$DOCKER_CONFIG/config.json" <<EOF
+{
+  "credHelpers": {
+    "${var.region}-docker.pkg.dev": "gcloud"
+  }
+}
+EOF
+
 
 # Clean up Artifact Registry (optional)
 echo "🧹 Deleting previous images in Artifact Registry..."
