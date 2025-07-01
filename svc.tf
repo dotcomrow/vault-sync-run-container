@@ -58,35 +58,34 @@ resource "google_artifact_registry_repository" "vault_sync_repo" {
 resource "null_resource" "ghcr_to_gcp_image_sync" {
   provisioner "local-exec" {
     environment = {
-      PROJECT_ID         = google_project.project.project_id
-      REGION             = var.region
-      REPO               = var.project_name
-      IMAGE              = var.project_name
-      IMAGE_NAME         = var.project_name
-      GHCR_USER          = "dotcomrow"
+      GHCR_USER   = "dotcomrow"
+      IMAGE_NAME  = var.project_name
+      REGION      = var.region
+      PROJECT_ID  = google_project.project.project_id
     }
 
-    command = <<EOT
-#!/bin/bash
+    command = <<-EOT
+      #!/bin/bash
+      set -euo pipefail
 
-# Download and extract gcloud
-curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
-tar -xf google-cloud-cli-linux-x86_64.tar.gz
-export PATH="$(pwd)/google-cloud-sdk/bin:$PATH"
+      # Download and extract gcloud
+      curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+      tar -xf google-cloud-cli-linux-x86_64.tar.gz
+      export PATH="$(pwd)/google-cloud-sdk/bin:$PATH"
 
-# Isolate gcloud + docker config
-export CLOUDSDK_CONFIG="$(pwd)/.gcloud"
-export DOCKER_CONFIG="$(pwd)/.docker"
-mkdir -p "$CLOUDSDK_CONFIG" "$DOCKER_CONFIG"
+      # Isolate gcloud + docker config
+      export CLOUDSDK_CONFIG="$(pwd)/.gcloud"
+      export DOCKER_CONFIG="$(pwd)/.docker"
+      mkdir -p "$CLOUDSDK_CONFIG" "$DOCKER_CONFIG"
 
-# Authenticate with GCP
-echo "$GOOGLE_CREDENTIALS" > key.json
-gcloud auth activate-service-account --key-file=key.json
-gcloud config set project "$PROJECT_ID"
-gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      # Authenticate with GCP
+      echo "$GOOGLE_CREDENTIALS" > key.json
+      gcloud auth activate-service-account --key-file=key.json
+      gcloud config set project "$PROJECT_ID"
+      gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
-# Write Docker config.json with gcloud helper
-cat > "$DOCKER_CONFIG/config.json" <<EOF
+      # Write Docker config.json with gcloud helper
+      cat > "$DOCKER_CONFIG/config.json" <<EOF
 {
   "credHelpers": {
     "$REGION-docker.pkg.dev": "gcloud"
@@ -94,32 +93,27 @@ cat > "$DOCKER_CONFIG/config.json" <<EOF
 }
 EOF
 
-# Delete all existing images in the Artifact Registry repo
-EXISTING_IMAGES=$(gcloud artifacts docker images list "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME" --format="get(version)" || true)
-for image in $EXISTING_IMAGES; do
-  gcloud artifacts docker images delete "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME@$image" --quiet --delete-tags || true
-done
+      # Delete all images in Artifact Registry repo (digests + tags)
+      REPO_PATH="$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME"
+      EXISTING_IMAGES=$(gcloud artifacts docker images list "$REPO_PATH" --format="get(version)" || true)
+      for image in $EXISTING_IMAGES; do
+        gcloud artifacts docker images delete "$REPO_PATH@$image" --quiet --delete-tags || true
+      done
 
-# Pull from GHCR (no auth needed for public image)
-docker pull "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest"
+      # Pull from GHCR
+      docker pull "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest"
 
-# Tag and push to GCP Artifact Registry
-docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
-  "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
+      # Tag and push to GCP Artifact Registry
+      docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
+        "$REPO_PATH/$IMAGE_NAME:latest"
 
-docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
+      docker push "$REPO_PATH/$IMAGE_NAME:latest"
 
-echo "✅ GHCR image successfully synced to GCP Artifact Registry."
-EOT
+      echo "✅ GHCR image successfully synced to GCP Artifact Registry."
+    EOT
   }
 
-  depends_on = [
-    google_artifact_registry_repository.vault_sync_repo
-  ]
-
   triggers = {
-    project     = var.project_name
-    image       = var.project_name
-    timestamp   = timestamp()
+    always_run = "${timestamp()}"
   }
 }
