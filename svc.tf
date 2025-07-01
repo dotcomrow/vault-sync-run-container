@@ -79,7 +79,7 @@ export DOCKER_CONFIG="$(pwd)/.docker"
 mkdir -p "$CLOUDSDK_CONFIG" "$DOCKER_CONFIG"
 
 # Authenticate with GCP
-echo "${GOOGLE_CREDENTIALS}" > key.json
+echo "$GOOGLE_CREDENTIALS" > key.json
 gcloud auth activate-service-account --key-file=key.json
 gcloud config set project "$PROJECT_ID"
 gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
