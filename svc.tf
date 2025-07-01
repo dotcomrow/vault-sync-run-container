@@ -78,7 +78,7 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
       export PATH="$(pwd)/google-cloud-sdk/bin:$PATH"
 
       # Authenticate with GCP
-      echo "$GOOGLE_CREDENTIALS" > key.json
+      printf "%s" "$GOOGLE_CREDENTIALS" > key.json
       gcloud auth activate-service-account --key-file=key.json
       gcloud config set project "$PROJECT_ID"
 
