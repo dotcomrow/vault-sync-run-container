@@ -67,15 +67,15 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
     command = <<-EOT
       #!/bin/bash
 
-      # Download and extract gcloud
-      curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
-      tar -xf google-cloud-cli-linux-x86_64.tar.gz
-      export PATH="$(pwd)/google-cloud-sdk/bin:$PATH"
-
-      # Isolate gcloud + docker config
+      # Setup directories for isolated gcloud and docker configs
       export CLOUDSDK_CONFIG="$(pwd)/.gcloud"
       export DOCKER_CONFIG="$(pwd)/.docker"
       mkdir -p "$CLOUDSDK_CONFIG" "$DOCKER_CONFIG"
+
+      # Download gcloud SDK and configure PATH
+      curl -sS -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+      tar -xf google-cloud-cli-linux-x86_64.tar.gz
+      export PATH="$(pwd)/google-cloud-sdk/bin:$PATH"
 
       # Authenticate with GCP
       echo "$GOOGLE_CREDENTIALS" > key.json
@@ -95,9 +95,9 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
 
       # Tag and push to GCP Artifact Registry
       docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
-        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME:latest"
+        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
 
-      docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME:latest"
+      docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
 
       echo "✅ GHCR image successfully synced to GCP Artifact Registry."
     EOT
