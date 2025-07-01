@@ -60,16 +60,22 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
     command = <<EOT
 #!/bin/bash
 
+curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+
+tar -xf google-cloud-cli-linux-x86_64.tar.gz
+
+./google-cloud-sdk/install.sh
+
 # Auth to GCP
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
-gcloud auth activate-service-account --key-file=key.json
-gcloud config set project "${google_project.project.project_id}"
-gcloud auth configure-docker "${var.region}-docker.pkg.dev" --quiet
+./google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=key.json
+./google-cloud-sdk/bin/gcloud config set project "${google_project.project.project_id}"
+./google-cloud-sdk/bin/gcloud auth configure-docker "${var.region}-docker.pkg.dev" --quiet
 
 # Delete all images in Artifact Registry repo (tags + digests)
-EXISTING_IMAGES=$(gcloud artifacts docker images list "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}" --format="get(version)")
+EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}" --format="get(version)")
 for image in $EXISTING_IMAGES; do
-  gcloud artifacts docker images delete "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}@$image" --quiet --delete-tags || true
+  ./google-cloud-sdk/bin/gcloud artifacts docker images delete "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}@$image" --quiet --delete-tags || true
 done
 
 # Pull from GHCR
