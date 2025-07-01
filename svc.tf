@@ -104,9 +104,9 @@ EOF
 
       # Tag and push to GCP Artifact Registry
       docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
-        "$REPO_PATH/$IMAGE_NAME:latest"
+        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME:latest"
 
-      docker push "$REPO_PATH/$IMAGE_NAME:latest"
+      docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME:latest"
 
       echo "✅ GHCR image successfully synced to GCP Artifact Registry."
     EOT
