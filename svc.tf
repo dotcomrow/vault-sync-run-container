@@ -60,33 +60,46 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
     command = <<EOT
 #!/bin/bash
 
+PROJECT_ID="${google_project.project.project_id}"
+
+# Download and install Google Cloud SDK
 curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
-
 tar -xf google-cloud-cli-linux-x86_64.tar.gz
-
 ./google-cloud-sdk/install.sh
 
-# Auth to GCP
+# Authenticate to GCP
 printf '%s' "$GOOGLE_CREDENTIALS" > key.json
 ./google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=key.json
-./google-cloud-sdk/bin/gcloud config set project "${google_project.project.project_id}"
+./google-cloud-sdk/bin/gcloud config set project "$PROJECT_ID"
 ./google-cloud-sdk/bin/gcloud auth configure-docker "${var.region}-docker.pkg.dev" --quiet
 
-# Delete all images in Artifact Registry repo (tags + digests)
-EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}" --format="get(version)")
-for image in $EXISTING_IMAGES; do
-  ./google-cloud-sdk/bin/gcloud artifacts docker images delete "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}@$image" --quiet --delete-tags || true
-done
+# Debug auth
+echo "🔐 Docker config:"
+cat ~/.docker/config.json || echo "⚠️ Docker config not found"
+
+# Delete existing images in Artifact Registry
+EXISTING_IMAGES=$(./google-cloud-sdk/bin/gcloud artifacts docker images list \
+  "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}" --format="get(version)")
+
+if [ -n "$EXISTING_IMAGES" ]; then
+  for image in $EXISTING_IMAGES; do
+    ./google-cloud-sdk/bin/gcloud artifacts docker images delete \
+      "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}@$image" \
+      --quiet --delete-tags || true
+  done
+else
+  echo "🗑️ No images to delete."
+fi
 
 # Pull from GHCR
 docker pull "ghcr.io/dotcomrow/${var.project_name}:latest"
 
 # Tag for GCP
 docker tag "ghcr.io/dotcomrow/${var.project_name}:latest" \
-  "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest"
+  "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}:latest"
 
 # Push to GCP Artifact Registry
-docker push "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest"
+docker push "${var.region}-docker.pkg.dev/$PROJECT_ID/${var.project_name}/${var.project_name}:latest"
 
 echo "✅ GHCR image synced to Artifact Registry."
 EOT
