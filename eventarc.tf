@@ -1,5 +1,5 @@
 resource "google_eventarc_trigger" "secret_manager_trigger" {
-  name     = "${var.project_name}-secret-trigger"
+  name     = "vault-sync-trigger"
   location = var.region
   project  = google_project.project.project_id
 
@@ -18,12 +18,6 @@ resource "google_eventarc_trigger" "secret_manager_trigger" {
     value     = "google.cloud.secretmanager.v1.SecretManagerService.AddSecretVersion"
   }
 
-  transport {
-    pubsub {
-      topic = google_pubsub_topic.secret_manager_events.id
-    }
-  }
-
   destination {
     cloud_run_service {
       service = google_cloud_run_v2_service.svc.name
@@ -31,7 +25,12 @@ resource "google_eventarc_trigger" "secret_manager_trigger" {
     }
   }
 
-  depends_on = [google_cloud_run_service_iam_policy.noauth-user-profile]
+  service_account = google_service_account.eventarc_service_account.email
+
+  depends_on = [
+    google_project_service.project_service,
+    google_cloud_run_v2_service.svc
+  ]
 }
 
 resource "google_pubsub_topic" "secret_manager_events" {
