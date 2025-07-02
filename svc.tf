@@ -1,15 +1,3 @@
-resource "google_service_account" "eventarc_service_account" {
-  account_id   = "eventarc-vault-sync"
-  display_name = "Service Account for Vault Sync Cloud Run"
-  project      = google_project.project.project_id
-}
-
-resource "google_project_iam_member" "secret_manager_grant" {
-  project = google_project.project.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.eventarc_service_account.email}"
-}
-
 resource "google_cloud_run_v2_service" "svc" {
   name     = "${var.project_name}"
   location = var.region
