@@ -63,3 +63,9 @@ resource "google_project_iam_member" "pubsub_subscriber" {
   role    = "roles/pubsub.subscriber"
   member  = "serviceAccount:${google_cloud_run_v2_service.svc.template[0].service_account}"
 }
+
+resource "google_project_iam_member" "eventarc_receive_auditlog" {
+  project = google_project.project.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = "serviceAccount:${google_service_account.eventarc_service_account.email}"
+}
