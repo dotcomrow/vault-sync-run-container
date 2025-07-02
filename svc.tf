@@ -10,23 +10,23 @@ resource "google_cloud_run_v2_service" "svc" {
       image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest"
 
       env {
-        name  = "GCP_BIGQUERY_PROJECT_ID"
-        value = var.GCP_BIGQUERY_PROJECT_ID
+        name  = "GCP_PROJECT_ID"
+        value = google_project.project.project_id
       }
 
       env {
-        name = "SHARED_SERVICE_ACCOUNT_EMAIL"
-        value = var.SHARED_SERVICE_ACCOUNT_EMAIL
+        name  = "VAULT_ADDR"
+        value = var.VAULT_ADDRESS
       }
 
       env {
-        name = "GCP_LOGGING_CREDENTIALS"
-        value = var.GCP_LOGGING_CREDENTIALS
+        name  = "VAULT_ROLE_ID"
+        value = var.VAULT_ROLE_ID
       }
 
       env {
-        name = "GCP_LOGGING_PROJECT_ID"
-        value = var.GCP_LOGGING_PROJECT_ID
+        name  = "VAULT_SECRET_ID"
+        value = var.VAULT_SECRET_ID
       }
     }
   }

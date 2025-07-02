@@ -83,3 +83,21 @@ variable GCP_LOGGING_CREDENTIALS {
   type        = string
   nullable = false
 }
+
+variable "VAULT_ADDRESS" {
+  description = "Vault address"
+  type        = string
+  nullable = false
+}
+
+variable "VAULT_ROLE_ID" {
+  description = "Vault role id"
+  type        = string
+  nullable = false
+}
+
+variable "VAULT_SECRET_ID" {
+  description = "Vault secret id"
+  type        = string
+  nullable = false
+}
