@@ -33,6 +33,20 @@ resource "google_eventarc_trigger" "secret_manager_trigger" {
   ]
 }
 
+resource "google_service_account" "eventarc_service_account" {
+  account_id   = "eventarc-vault-sync"
+  display_name = "Eventarc Trigger for Vault Sync"
+  project      = google_project.project.project_id
+}
+
+resource "google_cloud_run_service_iam_member" "eventarc_invoker" {
+  service  = google_cloud_run_v2_service.svc.name
+  location = var.region
+  project  = google_project.project.project_id
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.eventarc_service_account.email}"
+}
+
 resource "google_pubsub_topic" "secret_manager_events" {
   name    = "${var.project_name}-secret-events"
   project = google_project.project.project_id
