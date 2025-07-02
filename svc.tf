@@ -1,3 +1,15 @@
+resource "google_service_account" "eventarc_service_account" {
+  account_id   = "eventarc-vault-sync"
+  display_name = "Service Account for Vault Sync Cloud Run"
+  project      = google_project.project.project_id
+}
+
+resource "google_project_iam_member" "secret_manager_grant" {
+  project = google_project.project.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.eventarc_service_account.email}"
+}
+
 resource "google_cloud_run_v2_service" "svc" {
   name     = "${var.project_name}"
   location = var.region
@@ -6,6 +18,7 @@ resource "google_cloud_run_v2_service" "svc" {
   deletion_protection = false
 
   template {
+    service_account = google_service_account.eventarc_service_account.email
     containers {
       image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest"
 
@@ -35,7 +48,9 @@ resource "google_cloud_run_v2_service" "svc" {
     google_project_iam_member.registry_permissions,
     google_project_iam_member.secret_manager_grant,
     null_resource.ghcr_to_gcp_image_sync,
-    google_artifact_registry_repository.vault_sync_repo
+    google_artifact_registry_repository.vault_sync_repo,
+    google_service_account.eventarc_service_account,
+    google_project_iam_member.secret_manager_grant
   ]
 }
 
