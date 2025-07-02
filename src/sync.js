@@ -1,15 +1,56 @@
-// sync.js
-// Sync GCP Secret Manager secret to Vault on trigger
-
+const express = require('express');
+const bodyParser = require('body-parser');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const fetch = require('node-fetch');
 
+const app = express();
+app.use(bodyParser.json());
+
 const client = new SecretManagerServiceClient();
 
-async function main() {
+app.post('/sync-all', async (req, res) => {
   try {
-    const rawEvent = process.env.CLOUD_EVENT || await readStdin();
-    const event = JSON.parse(rawEvent);
+    const [secrets] = await client.listSecrets({
+      parent: `projects/${process.env.GCP_PROJECT_ID}`,
+    });
+
+    for (const secret of secrets) {
+      const name = secret.name;
+      const latestVersion = `${name}/versions/latest`;
+
+      const [accessResponse] = await client.accessSecretVersion({ name: latestVersion });
+      const payload = accessResponse.payload.data.toString();
+      const secretName = extractSecretName(latestVersion);
+      const vaultPath = `secret/${secretName}`;
+
+      console.log(`Syncing ${vaultPath}`);
+      const response = await fetch(`${process.env.VAULT_ADDR}/v1/${vaultPath}`, {
+        method: 'POST',
+        headers: {
+          'X-Vault-Token': await getVaultToken(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ value: payload })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to sync ${vaultPath}: ${text}`);
+      }
+    }
+
+    console.log("✅ All secrets synced to Vault.");
+    res.status(200).send("All secrets synced.");
+  } catch (err) {
+    console.error("Error in sync-all:", err);
+    res.status(500).send(err.message || "Unknown error");
+  }
+});
+
+
+app.post('/', async (req, res) => {
+  try {
+    const event = req.body;
 
     const secretVersion = event?.protoPayload?.resourceName;
     if (!secretVersion) throw new Error("Missing secret version in event payload");
@@ -37,11 +78,12 @@ async function main() {
     }
 
     console.log("Secret successfully written to Vault.");
+    res.status(200).send("OK");
   } catch (err) {
-    console.error("Error in sync:", err);
-    process.exit(1);
+    console.error("Error:", err);
+    res.status(500).send(err.message || "Unknown error");
   }
-}
+});
 
 function extractSecretName(versionPath) {
   const parts = versionPath.split("/");
@@ -51,7 +93,6 @@ function extractSecretName(versionPath) {
 async function getVaultToken() {
   if (process.env.VAULT_TOKEN) return process.env.VAULT_TOKEN;
 
-  // AppRole auth
   const roleId = process.env.VAULT_ROLE_ID;
   const secretId = process.env.VAULT_SECRET_ID;
   const resp = await fetch(`${process.env.VAULT_ADDR}/v1/auth/approle/login`, {
@@ -64,14 +105,8 @@ async function getVaultToken() {
   return json?.auth?.client_token;
 }
 
-function readStdin() {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', chunk => data += chunk);
-    process.stdin.on('end', () => resolve(data));
-    process.stdin.on('error', reject);
-  });
-}
-
-main();
+// Listen on $PORT (Cloud Run requirement)
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Sync service listening on port ${PORT}`);
+});

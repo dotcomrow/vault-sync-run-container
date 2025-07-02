@@ -6,4 +6,4 @@ WORKDIR /usr/src/app
 COPY . .
 
 EXPOSE 8080
-CMD [ "node", "dist/index.js" ]
+CMD [ "node", "src/sync.js" ]
