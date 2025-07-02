@@ -101,3 +101,9 @@ variable "VAULT_SECRET_ID" {
   type        = string
   nullable = false
 }
+
+variable "GITHUB_ORG" {
+  description = "GitHub organization name"
+  type        = string
+  nullable = false
+}

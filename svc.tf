@@ -61,7 +61,7 @@ resource "google_artifact_registry_repository" "vault_sync_repo" {
 resource "null_resource" "ghcr_to_gcp_image_sync" {
   provisioner "local-exec" {
     environment = {
-      GHCR_USER   = "dotcomrow"
+      GHCR_USER   = var.GITHUB_ORG
       IMAGE_NAME  = var.project_name
       REGION      = var.region
       PROJECT_ID  = google_project.project.project_id
