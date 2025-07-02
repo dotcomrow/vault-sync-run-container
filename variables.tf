@@ -28,7 +28,11 @@ variable "apis" {
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "containerregistry.googleapis.com",
-    "compute.googleapis.com"
+    "compute.googleapis.com",
+    "eventarc.googleapis.com",                   # ✅ Add this
+    "pubsub.googleapis.com",                     # ✅ Recommended (used by Eventarc triggers)
+    "secretmanager.googleapis.com",              # ✅ Required for your secret sync
+    "logging.googleapis.com"                     # Optional, for better visibility
   ]
 }
 
