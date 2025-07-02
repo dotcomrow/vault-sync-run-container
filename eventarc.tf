@@ -69,3 +69,9 @@ resource "google_project_iam_member" "eventarc_receive_auditlog" {
   role    = "roles/eventarc.eventReceiver"
   member  = "serviceAccount:${google_service_account.eventarc_service_account.email}"
 }
+
+resource "google_project_iam_member" "cloud_run_secret_access" {
+  project = google_project.project.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.eventarc_service_account.email}"
+}
