@@ -1,9 +1,22 @@
 FROM node:18
 
-# Create app directory
+# Set working directory
 WORKDIR /usr/src/app
 
+# Copy package manifests first for better caching
+COPY package*.json tsconfig.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the app
 COPY . .
 
+# Build TypeScript
+RUN npm run build
+
+# Expose Cloud Run's default port
 EXPOSE 8080
-CMD [ "node", "src/sync.js" ]
+
+# Run compiled app
+CMD ["node", "dist/sync.js"]
