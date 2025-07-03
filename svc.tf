@@ -1,3 +1,11 @@
+resource "random_id" "image_tag" {
+  byte_length = 4
+}
+
+locals {
+  image_tag = random_id.image_tag.hex
+}
+
 resource "google_cloud_run_v2_service" "svc" {
   name     = "${var.project_name}"
   location = var.region
@@ -8,7 +16,7 @@ resource "google_cloud_run_v2_service" "svc" {
   template {
     service_account = google_service_account.eventarc_service_account.email
     containers {
-      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest?ts=${timestamp()}"
+      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:${local.image_tag}"
 
       env {
         name  = "GCP_PROJECT_ID"
@@ -66,6 +74,7 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
       IMAGE_NAME  = var.project_name
       REGION      = var.region
       PROJECT_ID  = google_project.project.project_id
+      IMAGE_TAG   = local.image_tag
     }
 
     command = <<-EOT
@@ -102,7 +111,8 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
 
       # Tag and push to GCP Artifact Registry
       docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
-        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
+        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest" \
+        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:${local.image_tag}"
 
       docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
 
