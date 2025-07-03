@@ -1,9 +1,5 @@
-resource "random_id" "image_tag" {
-  byte_length = 4
-}
-
 locals {
-  image_tag = random_id.image_tag.hex
+  image_tag = formatdate("YYYYMMDDHHmmss", timestamp())
 }
 
 resource "google_cloud_run_v2_service" "svc" {
