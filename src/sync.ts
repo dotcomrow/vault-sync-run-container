@@ -65,7 +65,7 @@ app.post('/', async (req: Request, res: Response) => {
     if (!payload) throw new Error("Empty secret payload");
 
     const secretName = extractSecretName(secretVersion);
-    const vaultPath = `secret/${secretName}`;
+    const vaultPath = `secret/data/${secretName}`;
 
     console.log(`Pushing secret to Vault at path: ${vaultPath}`);
     const vaultResponse = await fetch(`${process.env.VAULT_ADDR}/v1/${vaultPath}`, {
