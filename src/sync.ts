@@ -27,7 +27,7 @@ app.post('/sync-all', async (req: Request, res: Response) => {
       if (!payload) continue;
 
       const secretName = extractSecretName(latestVersion);
-      const vaultPath = `secret/${secretName}`;
+      const vaultPath = `secret/data/${secretName}`;
 
       console.log(`Syncing ${vaultPath}`);
       const vaultResponse = await fetch(`${process.env.VAULT_ADDR}/v1/${vaultPath}`, {
