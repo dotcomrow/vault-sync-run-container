@@ -36,7 +36,9 @@ app.post('/sync-all', async (req: Request, res: Response) => {
           'X-Vault-Token': await getVaultToken(),
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ value: payload }),
+        body: JSON.stringify({
+          data: payload  // 👈 wrap your payload in a top-level "data"
+        }),
       });
 
       if (!vaultResponse.ok) {
@@ -74,7 +76,9 @@ app.post('/', async (req: Request, res: Response) => {
         'X-Vault-Token': await getVaultToken(),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ value: payload }),
+      body: JSON.stringify({
+        data: payload  // 👈 wrap your payload in a top-level "data"
+      }),
     });
 
     if (!vaultResponse.ok) {
