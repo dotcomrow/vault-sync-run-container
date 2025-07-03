@@ -30,6 +30,13 @@ app.post('/sync-all', async (req: Request, res: Response) => {
       const vaultPath = `secret/data/${secretName}`;
 
       console.log(`Syncing ${vaultPath}`);
+      console.log("vaultPath =", vaultPath);
+      console.log("payload =", payload);
+      console.log("vaultBody =", JSON.stringify({
+          data: {
+            value: payload  // wrap the string inside an object
+          }
+        }, null, 2));
       const vaultResponse = await fetch(`${process.env.VAULT_ADDR}/v1/${vaultPath}`, {
         method: 'POST',
         headers: {
