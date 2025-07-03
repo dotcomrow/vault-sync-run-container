@@ -8,7 +8,7 @@ resource "google_cloud_run_v2_service" "svc" {
   template {
     service_account = google_service_account.eventarc_service_account.email
     containers {
-      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest"
+      image = "${var.region}-docker.pkg.dev/${google_project.project.project_id}/${var.project_name}/${var.project_name}:latest?ts=${timestamp()}"
 
       env {
         name  = "GCP_PROJECT_ID"
@@ -40,6 +40,7 @@ resource "google_cloud_run_v2_service" "svc" {
     google_service_account.eventarc_service_account,
     google_project_iam_member.cloud_run_secret_access
   ]
+
 }
 
 resource "google_cloud_run_service_iam_policy" "noauth-user-profile" {
