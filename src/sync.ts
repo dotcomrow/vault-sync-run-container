@@ -37,7 +37,9 @@ app.post('/sync-all', async (req: Request, res: Response) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          data: payload  // 👈 wrap your payload in a top-level "data"
+          data: {
+            value: payload  // wrap the string inside an object
+          }
         }),
       });
 
@@ -77,7 +79,9 @@ app.post('/', async (req: Request, res: Response) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        data: payload  // 👈 wrap your payload in a top-level "data"
+        data: {
+          value: payload  // wrap the string inside an object
+        }
       }),
     });
 
