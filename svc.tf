@@ -100,7 +100,7 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
       gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
       # Delete all images in Artifact Registry repo (digests + tags)
-      REPO_PATH="$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME"
+      REPO_PATH="$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME"
       EXISTING_IMAGES=$(gcloud artifacts docker images list "$REPO_PATH" --format="get(version)" || true)
       for image in $EXISTING_IMAGES; do
         gcloud artifacts docker images delete "$REPO_PATH@$image" --quiet --delete-tags || true
@@ -111,10 +111,9 @@ resource "null_resource" "ghcr_to_gcp_image_sync" {
 
       # Tag and push to GCP Artifact Registry
       docker tag "ghcr.io/$GHCR_USER/$IMAGE_NAME:latest" \
-        "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest" \
         "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:${local.image_tag}"
 
-      docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
+      docker push "$REGION-docker.pkg.dev/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:${local.image_tag}"
 
       echo "✅ GHCR image successfully synced to GCP Artifact Registry."
     EOT
